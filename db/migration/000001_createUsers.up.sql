@@ -1,9 +1,10 @@
-CREATE TABLE users (
-   id BIGSERIAL primary key,
-   first_name TEXT not null,
-   last_name TEXT,
-   email TEXT,
-   password TEXT(60),
-   created_at TIMESTAMP default now(),
-   updated_at TIMESTAMP default now(),
+CREATE TABLE users
+(
+  id                     SERIAL PRIMARY KEY,
+  email                  character varying NOT NULL UNIQUE,
+  password_no_hash       character varying NOT NULL,
+  first_name             character varying,
+  last_name              character varying,
+  created_at             timestamp with time zone DEFAULT now() NOT NULL,
+  updated_at             timestamp with time zone DEFAULT now() NOT NULL
 );
