@@ -3,7 +3,10 @@ package data
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 const dbTimeout = time.Second * 3
@@ -126,7 +129,7 @@ func (u *User) Update() error {
 		email = $1,
 		first_name = $2,
 		last_name = $3,
-		updated_at = $4,
+		updated_at = $4
 		where id = $5
 	`
 	_, err := db.ExecContext(ctx, stmt,
@@ -155,6 +158,61 @@ func (u *User) Delete() error {
 	}
 
 	return nil
+}
+
+func (u *User) Insert(user User) (int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+	defer cancel()
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 12)
+	if err != nil {
+		return 0, err
+	}
+
+	var newId int
+	stmt := `insert into users (email, first_name, last_name, password_no_hash, created_at, updated_at)
+	values ($1, $2, $3, $4, $5, $6) returning id`
+
+	err = db.QueryRowContext(ctx, stmt, user.Email, user.FirstName, user.LastName, hashedPassword, time.Now(), time.Now()).Scan(&newId)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return newId, nil
+}
+
+func (u *User) ResetPassword(password string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+	defer cancel()
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	if err != nil {
+		return err
+	}
+
+	stmt := `update users set password_no_hash = $1 where id = $2`
+	_, err = db.ExecContext(ctx, stmt, hashedPassword, u.ID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (u *User) PasswordMatches(plainText string) (bool, error) {
+	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(plainText))
+
+	if err != nil {
+		switch {
+		case errors.Is(err, bcrypt.ErrMismatchedHashAndPassword):
+			// invalid password
+			return false, nil
+		default:
+			return false, err
+		}
+	}
+	return true, nil
 }
 
 type Token struct {
