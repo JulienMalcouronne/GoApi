@@ -104,7 +104,7 @@ func (u *User) GetOne(id int) (*User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
 
-	query := `select id, email, first_name, password_no_hash, created_at, updated_at from users where id = $1`
+	query := `select id, email, first_name,last_name, password_no_hash, created_at, updated_at from users where id = $1`
 
 	var user User
 	row := db.QueryRowContext(ctx, query, id)
@@ -236,9 +236,10 @@ func (t *Token) GetByToken(plainText string) (*Token, error) {
 	defer cancel()
 
 	query := `select id, user_id, email, token, token_hash, created_at, updated_at, expiry
-	 from tokens where token = $1`
+			from tokens where token = $1`
 
 	var token Token
+
 	row := db.QueryRowContext(ctx, query, plainText)
 	err := row.Scan(
 		&token.ID,
@@ -262,10 +263,10 @@ func (t *Token) GetUserForToken(token Token) (*User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
 
-	query := `select id, email, first_name, password_no_hash, created_at, updated_at from users where email = $1`
+	query := `select id, email, first_name, last_name, password, created_at, updated_at from users where id = $1`
 
 	var user User
-	row := db.QueryRowContext(ctx, query, token.ID)
+	row := db.QueryRowContext(ctx, query, token.UserId)
 
 	err := row.Scan(
 		&user.ID,
@@ -350,7 +351,7 @@ func (t *Token) Insert(token Token, u User) error {
 	}
 
 	token.Email = u.Email
-	stmt = `insert into tokens (user_id, email, token, token_hash, created_at, updated_at, expiry
+	stmt = `insert into tokens (user_id, email, token, token_hash, created_at, updated_at, expiry)
 		 values($1, $2, $3, $4, $5, $6, $7)`
 
 	_, err = db.ExecContext(ctx, stmt,
@@ -384,7 +385,7 @@ func (t *Token) DeleteByToken(plainText string) error {
 	return nil
 }
 
-func (t *Token) ValidTokens(plainText string) (bool, error) {
+func (t *Token) ValidToken(plainText string) (bool, error) {
 	token, err := t.GetByToken(plainText)
 	if err != nil {
 		return false, errors.New("no matching token found")
