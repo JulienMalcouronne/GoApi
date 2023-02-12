@@ -2,8 +2,6 @@ package main
 
 import (
 	"net/http"
-	"time"
-	"vue-api/internal/data"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -30,101 +28,10 @@ func (app *application) routes() http.Handler {
 		mux.Post("/users/all", app.AllUsers)
 		mux.Post("users/save", app.EditUser)
 		mux.Post("users/delete", app.DeleteUser)
+		mux.Post("/log-user-out/{id}", app.LogUserOutAndSetInactive)
 	})
 	mux.Get("/users/all", func(w http.ResponseWriter, r *http.Request) {
 
-	})
-
-	mux.Get("/users/add", func(w http.ResponseWriter, r *http.Request) {
-		var u = data.User{
-			Email:     "you@therezzzzaa.com",
-			FirstName: "You",
-			LastName:  "There",
-			Password:  "password",
-		}
-
-		app.infoLog.Println("Adding user...")
-
-		id, err := app.models.User.Insert(u)
-		if err != nil {
-			app.errorLog.Println(err)
-			app.errorJSON(w, err, http.StatusForbidden)
-			return
-		}
-
-		app.infoLog.Println("Got back id of", id)
-		newUser, _ := app.models.User.GetOne(id)
-		app.writeJSON(w, http.StatusOK, newUser)
-	})
-
-	mux.Get("/test-generate-token", func(w http.ResponseWriter, r *http.Request) {
-		token, err := app.models.User.Token.GenerateToken(2, 60*time.Minute)
-		if err != nil {
-			app.errorLog.Println(err)
-			return
-		}
-
-		token.Email = "admin@example.com"
-		token.CreatedAt = time.Now()
-		token.UpdatedAt = time.Now()
-
-		payload := jsonResponse{
-			Error:   false,
-			Message: "success",
-			Data:    token,
-		}
-
-		app.writeJSON(w, http.StatusOK, payload)
-	})
-
-	mux.Get("/test-save-token", func(w http.ResponseWriter, r *http.Request) {
-		token, err := app.models.User.Token.GenerateToken(2, 60*time.Minute)
-		if err != nil {
-			app.errorLog.Println(err)
-			return
-		}
-
-		user, err := app.models.User.GetOne(2)
-		app.infoLog.Println("user", user)
-		if err != nil {
-			app.errorLog.Println(err)
-			return
-		}
-
-		token.UserId = user.ID
-		token.CreatedAt = time.Now()
-		token.UpdatedAt = time.Now()
-
-		println(token)
-
-		err = token.Insert(*token, *user)
-		if err != nil {
-			app.errorLog.Println(err)
-			return
-		}
-
-		payload := jsonResponse{
-			Error:   false,
-			Message: "success",
-			Data:    token,
-		}
-
-		app.writeJSON(w, http.StatusOK, payload)
-	})
-
-	mux.Get("/test-validate-token", func(w http.ResponseWriter, r *http.Request) {
-		tokenToValidate := r.URL.Query().Get("token")
-		valid, err := app.models.Token.ValidToken(tokenToValidate)
-		if err != nil {
-			app.errorJSON(w, err)
-			return
-		}
-
-		var payload jsonResponse
-		payload.Error = false
-		payload.Data = valid
-
-		app.writeJSON(w, http.StatusOK, payload)
 	})
 
 	return mux
