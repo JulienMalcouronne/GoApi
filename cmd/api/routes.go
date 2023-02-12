@@ -27,29 +27,12 @@ func (app *application) routes() http.Handler {
 
 	mux.Route("/admin", func(mux chi.Router) {
 		mux.Use(app.AuthTokenMiddleware)
-
-		mux.Post("/foo", func(w http.ResponseWriter, r *http.Request) {
-			payload := jsonResponse{
-				Error:   false,
-				Message: "bar",
-			}
-			app.writeJSON(w, http.StatusOK, payload)
-		})
+		mux.Post("/users/all", app.AllUsers)
+		mux.Post("users/save", app.EditUser)
+		mux.Post("users/delete", app.DeleteUser)
 	})
 	mux.Get("/users/all", func(w http.ResponseWriter, r *http.Request) {
-		var users data.User
-		all, err := users.GetAll()
-		if err != nil {
-			app.errorLog.Println(err)
-			return
-		}
 
-		payload := jsonResponse{
-			Error:   false,
-			Message: "success",
-			Data:    envelope{"users": all},
-		}
-		app.writeJSON(w, http.StatusOK, payload)
 	})
 
 	mux.Get("/users/add", func(w http.ResponseWriter, r *http.Request) {
